@@ -1,0 +1,226 @@
+<html>
+  <head>
+    <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>git | 记一记</title>
+<link rel="shortcut icon" href="https://Tiannary.github.io/favicon.ico?v=1688481321822">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@2.3.0/fonts/remixicon.css" rel="stylesheet">
+<link rel="stylesheet" href="https://Tiannary.github.io/styles/main.css">
+<link rel="alternate" type="application/atom+xml" title="git | 记一记 - Atom Feed" href="https://Tiannary.github.io/atom.xml">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Droid+Serif:400,700">
+
+
+
+    <meta name="description" content="git原理
+节点记录每次commit的文件之间差异，用哈希值唯一表示，整个git库的结构类似树，commit连接commit，从你当前HEAD所指的节点向上溯源寻根即可得到所有的修改从形成改动集。用branch指针指向每次commit的节点..." />
+    <meta name="keywords" content="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.10.0/katex.min.css">
+    <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.5.1/build/highlight.min.js"></script>
+  </head>
+  <body>
+    <div class="main">
+      <div class="main-content">
+        <div class="site-header">
+  <a href="https://Tiannary.github.io">
+  <img class="avatar" src="https://Tiannary.github.io/images/avatar.png?v=1688481321822" alt="">
+  </a>
+  <h1 class="site-title">
+    记一记
+  </h1>
+  <p class="site-description">
+    温故而知新
+  </p>
+  <div class="menu-container">
+    
+      
+        <a href="/" class="menu">
+          首页
+        </a>
+      
+    
+      
+        <a href="/archives" class="menu">
+          归档
+        </a>
+      
+    
+      
+        <a href="/tags" class="menu">
+          标签
+        </a>
+      
+    
+      
+        <a href="/post/about" class="menu">
+          关于
+        </a>
+      
+    
+  </div>
+  <div class="social-container">
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  </div>
+</div>
+
+        <div class="post-detail">
+          <article class="post">
+            <h2 class="post-title">
+              git
+            </h2>
+            <div class="post-info">
+              <span>
+                2023-06-30
+              </span>
+              <span>
+                10 min read
+              </span>
+              
+            </div>
+            
+            <div class="post-content-wrapper">
+              <div class="post-content" v-pre>
+                <h1 id="git原理">git原理</h1>
+<p>节点记录每次commit的文件之间差异，用哈希值唯一表示，整个git库的结构类似树，commit连接commit，从你当前HEAD所指的节点向上溯源寻根即可得到所有的修改从形成改动集。用branch指针指向每次commit的节点，</p>
+<p><code>git commit</code>每次commit其实就是1、在HEAD所指处新建节点，记录父节点；2、将HEAD所指的branch指针指向刚刚提交的commit，一个commit节点一般只有一个父节点。但当发生<code>git merge</code>时，新建的节点会有两个父节点<br>
+添加<code>-a/--all</code>参数可设置修改文件后不需要执行 git add 命令，直接来提交<br>
+通过添加<code>--amend</code>参数修改上次提交，即重新从上个节点提交，适用于例如需要修改上一次提交的某个参数就需要先cherry-pick/rebase复制上一节点到此节点的上一节点，然后使用amend重新提交后再使用cherry-pick或/rebase将修改节点下面的子节点全复制过来</p>
+<p><code>git branch</code>查看本地有什么分支，当前HEAD指的哪条<br>
+<code>git branch &lt;branch&gt;</code>新建分支branch其实就是新建一个指向commit的指针，而HEAD一般是透明的，是指向branch指针的指针（分支名）（指向指针的指针）<br>
+<code>git branch -f &lt;branch&gt; &lt;addr&gt;</code>使用<code>-f</code>参数强制将branch指针指向<code>&lt;addr&gt;</code>，<code>&lt;addr&gt;</code>可以是哈希值，branch指针，相对引用，HEAD都行（当HEAD指向的是branch指针时，被强制指向的branch指针最终指向依旧是节点而不是branch指针，hhhhhhh有一点绕）</p>
+<p><code>git checkout &lt;addr&gt;</code>其实就是变换HEAD的指向，如果<code>&lt;addr&gt;</code>是分支名则就是HEAD -&gt; 分支名 -&gt; commit节点的哈希值，若<code>&lt;addr&gt;</code>直接为哈希值，则是分离了HEAD指向branch指针的关系，变为HEAD -&gt; commit节点的哈希值。<br>
+<code>git checkout -b &lt;branch&gt;</code>将HEAD指向新建的branch指针</p>
+<p>指针的相对引用，两种<code>&lt;addr&gt;^&lt;num&gt;</code>，<code>&lt;addr&gt;~&lt;num&gt;</code>，一个<code>^</code>代表上一个节点，多个<code>^</code>代表上多个节点，<code>^&lt;num&gt;</code>表示存在多个父节点时（如使用merge指令）指定要引用哪个父节点，<code>&lt;num&gt;</code>代表父节点提交的先后；<code>~&lt;num&gt;</code>代表上<code>&lt;num&gt;</code>个节点，缺省代表一个。例如<code>HEAD^^</code>，<code>HEAD~2</code>均代表HEAD父节点的父节点</p>
+<blockquote>
+<p>小结：即<code>git checkout</code>控制HEAD指针，<code>git branch</code>控制branch指针，<code>git commit</code>创建节点并控制HEAD指向的branch指针指向新节点</p>
+</blockquote>
+<p><code>git merge &lt;branch&gt;</code> 其实就是1、新建一个节点，将当前branch指针指向的节点和<code>&lt;branch&gt;</code>所指的节点作为父节点；2、将当前branch指针指向刚刚新建的节点。 使用<code>--no-ff</code>参数（not fast forward）进行非快速向前提交，可保护main上只有关键节点的提交，例如如果merge时main所在节点到<code>&lt;branch&gt;</code>的节点没有任何分支则默认进行快速向前（fast forward）即将main移动到<code>&lt;branch&gt;</code>，而not fast forward则会新建个节点将main所在节点和<code>&lt;branch&gt;</code>所在节点作为父节点，这样可保证当main分支reset时退回main的上一节点而不是进入<code>&lt;branch&gt;</code>分支<br>
+<code>git rebase &lt;branch1&gt; &lt;branch2&gt;</code>从<code> &lt;branch2&gt;</code>（若缺省则默认HEAD位置）开始向上找父节点直到找到和<code>&lt;branch&gt;</code>的是共同父节点的节点，然后<strong>基于</strong><code>&lt;branch1&gt;</code>向下复制刚刚向上找父节点形成的改动集，然后<code> &lt;branch2&gt;</code>指向最新的末端节点。</p>
+<p><code>git reset &lt;addr&gt;</code>回撤其实就是移动指针，将当前branch指针移动到<code>&lt;addr&gt;</code>，与<code>git branch -f &lt;branch&gt; &lt;addr&gt;</code>功能，差别知识不需要指定branch指针，而是直接移动当前HEAD所指的branch指针（因此在HEAD分离，HEAD指向哈希值的情况此指令无效）<br>
+<code>git revert &lt;addr&gt;</code>复制<code>&lt;addr&gt;</code>的节点到当前branch指针所指节点的下面（这或许亦是种回撤，原因是<code>git reset &lt;addr&gt;</code>这种“改写历史”的方法对大家一起使用的远程分支是无效的，为了撤销更改并分享给别人，就需要使用 git revert<code>（此条理解可能不准确）</code></p>
+<p><code>git cherry-pick &lt;addr1&gt; &lt;addr2&gt; &lt;addr3&gt;</code>按顺序复制<code>&lt;addr&gt;</code>到当前branch指针，要牢记 cherry-pick 可以将提交树上任何地方的提交记录取过来追加到 HEAD 上（只要不是 HEAD 上游的提交就没问题）。<br>
+<code>git rebase -i &lt;branch&gt;</code>添加<code>-i</code>（<code>--interactive</code>）参数，使用交互型rebase复制移动节点，从而实现指定节点和顺序进行复制</p>
+<p><code>git tag &lt;name&gt; &lt;addr&gt;</code>给节点添加tag，在提交树中唯一识别（感觉就是给节点命名，例如把某次提交命名为Version_0.1.0代表1.0版本发布，作为里程碑的节点）<br>
+<code>git describe &lt;addr&gt;</code>它输出的结果是这样的：<br>
+<code>&lt;tag&gt;_&lt;numCommits&gt;_g&lt;hash&gt;</code><br>
+tag 表示的是离 addr 最近的标签， numCommits 是表示这个 addr 与 tag 相差有多少个提交记录， hash 表示的是你所给定的 addr 所表示的提交记录哈希值的前几位</p>
+<hr>
+<p><code>git remote add &lt;name&gt; &lt;remote&gt;</code>设置远程仓库。<br>
+在 GitHub 上创建的仓库路径为<code>git@github.com:用户名 / git-tutorial.git</code><br>
+例如<code>git remote add origin git@github.com:github-book/git-tutorial.git</code>按照上述格式执行之后，Git 会自动将<code>git@github.com:github-book/git-tutorial.git</code>设置为名称为 本地的远程仓库，名称为origin（标识符）。</p>
+<p><code>git clone</code>本地创建一个远程仓库的拷贝，同时创建对应的远程branch<code>&lt;remote name&gt;/&lt;branch name&gt;</code>，例如<code>origin/main</code>，注意使用Git 时, 你的远程仓库名默认为origin。<br>
+远程branch的特性是不会随本地提交移动，当checkout远程分支时会自动分离HEAD，远程分支只反映了远程仓库在你最后一次与它通信时（例如fetch）的状态，只有在远程仓库中相应的分支更新了以后且本地与远程通讯后才会更新。<br>
+<code>git fetch</code>完成了仅有的但是很重要的两步:</p>
+<ol>
+<li>从远程仓库下载本地仓库中缺失的提交记录</li>
+<li>更新远程分支指针(如 origin/main)</li>
+</ol>
+<p>可以将 git fetch 的理解为单纯的下载操作，并不会改变你本地仓库的状态。<code>git fetch</code>实际上将本地仓库中的远程分支更新成了远程仓库相应分支最新的状态。通常通过互联网（使用 http:// 或 git:// 协议) 与远程仓库通信<br>
+<code>git pull</code>等于fetch后再merge远程分支，添加参数<code>--rebase</code>等于fetch后再rebase远程分支<br>
+<code>git push</code>将本地改动推送到远程仓库（根据情况git可能不会给你推送），<code>git push</code>不带任何参数时的行为与 Git 的一个名为<code>push.default</code>的配置有关。它的默认值取决于正使用的 Git 的版本,在项目中进行推送之前，最好检查一下这个配置。为了 push 新变更到远程仓库，要做的其实就是包含远程仓库中最新变更。意思就是只要本地分支包含了远程分支（如 o/main）中的最新变更就可以push了<br>
+<code>git push &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>其中<code>&lt;remote&gt;</code>指定远程库，<code>&lt;source&gt;</code>指定要push本地哪个addr向上的改动集，<code>&lt;destination&gt;</code>指定push到远程库哪条分支（若缺省则为<code>&lt;source&gt;</code>跟踪的远程分支，若此分支不存在则创建）</p>
+<blockquote>
+<p><code>git fetch &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>也是类似的，只不过是相反操作<br>
+<code>git pull &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>也是类似的，<code>&lt;destination&gt;</code>指定HEADmerge哪条分支</p>
+</blockquote>
+<blockquote>
+<p>如果是在一个大的合作团队中工作, 很可能是main被锁定了, 需要一些Pull Request流程来合并修改。如果直接提交(commit)到本地main, 然后试图推送(push)修改, 将会收到这样类似的信息:<br>
+<code>! [远程服务器拒绝] main -&gt; main (TF402455: 不允许推送(push)这个分支; 你必须使用pull request来更新这个分支.)</code><br>
+远程服务器拒绝直接推送(push)提交到main, 因为策略配置要求 pull requests 来提交更新。按照流程，新建一个分支feature, 推送(push)这个分支并申请pull request。然后reset你的main分支和远程服务器保持一致, 否则下次pull时如果他人的提交和你的提交有冲突时就会出现问题.</p>
+</blockquote>
+<blockquote>
+<p>main 和 origin/main 的关联关系就是由分支的<strong>remote tracking</strong>属性决定的。main 被设定为跟踪 origin/main —— 这意味着为 main 分支指定了推送的目的地以及拉取后合并的目标。当克隆仓库的时候, Git 就自动把这个属性设置好了。<br>
+有两种方法设置这个属性</p>
+<ul>
+<li>方法一:<code>git checkout -b side origin/main</code><br>
+创建一个名为side的分支，它跟踪远程分支 origin/main</li>
+<li>方法二：<code>git branch -u origin/main side</code><br>
+这样side就会跟踪 origin/main 了。如果当前就在side分支上, 还可以省略side</li>
+</ul>
+</blockquote>
+
+              </div>
+              <div class="toc-container">
+                <ul class="markdownIt-TOC">
+<li><a href="#git%E5%8E%9F%E7%90%86">git原理</a></li>
+</ul>
+
+              </div>
+            </div>
+          </article>
+        </div>
+
+        
+          <div class="next-post">
+            <div class="next">下一篇</div>
+            <a href="https://Tiannary.github.io/post/wen-xian/">
+              <h3 class="post-title">
+                文献
+              </h3>
+            </a>
+          </div>
+        
+
+        
+
+        <div class="site-footer">
+  Powered by <a href="https://github.com/getgridea/gridea" target="_blank">Gridea</a>
+  <a class="rss" href="https://Tiannary.github.io/atom.xml" target="_blank">
+    <i class="ri-rss-line"></i> RSS
+  </a>
+</div>
+
+      </div>
+    </div>
+
+    <script>
+      hljs.initHighlightingOnLoad()
+
+      let mainNavLinks = document.querySelectorAll(".markdownIt-TOC a");
+
+      // This should probably be throttled.
+      // Especially because it triggers during smooth scrolling.
+      // https://lodash.com/docs/4.17.10#throttle
+      // You could do like...
+      // window.addEventListener("scroll", () => {
+      //    _.throttle(doThatStuff, 100);
+      // });
+      // Only not doing it here to keep this Pen dependency-free.
+
+      window.addEventListener("scroll", event => {
+        let fromTop = window.scrollY;
+
+        mainNavLinks.forEach((link, index) => {
+          let section = document.getElementById(decodeURI(link.hash).substring(1));
+          let nextSection = null
+          if (mainNavLinks[index + 1]) {
+            nextSection = document.getElementById(decodeURI(mainNavLinks[index + 1].hash).substring(1));
+          }
+          if (section.offsetTop <= fromTop) {
+            if (nextSection) {
+              if (nextSection.offsetTop > fromTop) {
+                link.classList.add("current");
+              } else {
+                link.classList.remove("current");    
+              }
+            } else {
+              link.classList.add("current");
+            }
+          } else {
+            link.classList.remove("current");
+          }
+        });
+      });
+
+    </script>
+  </body>
+</html>

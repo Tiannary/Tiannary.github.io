@@ -1,0 +1,375 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://Tiannary.github.io</id>
+    <title>记一记</title>
+    <updated>2023-07-04T14:35:36.469Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://Tiannary.github.io"/>
+    <link rel="self" href="https://Tiannary.github.io/atom.xml"/>
+    <subtitle>温故而知新</subtitle>
+    <logo>https://Tiannary.github.io/images/avatar.png</logo>
+    <icon>https://Tiannary.github.io/favicon.ico</icon>
+    <rights>All rights reserved 2023, 记一记</rights>
+    <entry>
+        <title type="html"><![CDATA[git]]></title>
+        <id>https://Tiannary.github.io/post/git/</id>
+        <link href="https://Tiannary.github.io/post/git/">
+        </link>
+        <updated>2023-06-30T07:30:04.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="git原理">git原理</h1>
+<p>节点记录每次commit的文件之间差异，用哈希值唯一表示，整个git库的结构类似树，commit连接commit，从你当前HEAD所指的节点向上溯源寻根即可得到所有的修改从形成改动集。用branch指针指向每次commit的节点，</p>
+<p><code>git commit</code>每次commit其实就是1、在HEAD所指处新建节点，记录父节点；2、将HEAD所指的branch指针指向刚刚提交的commit，一个commit节点一般只有一个父节点。但当发生<code>git merge</code>时，新建的节点会有两个父节点<br>
+添加<code>-a/--all</code>参数可设置修改文件后不需要执行 git add 命令，直接来提交<br>
+通过添加<code>--amend</code>参数修改上次提交，即重新从上个节点提交，适用于例如需要修改上一次提交的某个参数就需要先cherry-pick/rebase复制上一节点到此节点的上一节点，然后使用amend重新提交后再使用cherry-pick或/rebase将修改节点下面的子节点全复制过来</p>
+<p><code>git branch</code>查看本地有什么分支，当前HEAD指的哪条<br>
+<code>git branch &lt;branch&gt;</code>新建分支branch其实就是新建一个指向commit的指针，而HEAD一般是透明的，是指向branch指针的指针（分支名）（指向指针的指针）<br>
+<code>git branch -f &lt;branch&gt; &lt;addr&gt;</code>使用<code>-f</code>参数强制将branch指针指向<code>&lt;addr&gt;</code>，<code>&lt;addr&gt;</code>可以是哈希值，branch指针，相对引用，HEAD都行（当HEAD指向的是branch指针时，被强制指向的branch指针最终指向依旧是节点而不是branch指针，hhhhhhh有一点绕）</p>
+<p><code>git checkout &lt;addr&gt;</code>其实就是变换HEAD的指向，如果<code>&lt;addr&gt;</code>是分支名则就是HEAD -&gt; 分支名 -&gt; commit节点的哈希值，若<code>&lt;addr&gt;</code>直接为哈希值，则是分离了HEAD指向branch指针的关系，变为HEAD -&gt; commit节点的哈希值。<br>
+<code>git checkout -b &lt;branch&gt;</code>将HEAD指向新建的branch指针</p>
+<p>指针的相对引用，两种<code>&lt;addr&gt;^&lt;num&gt;</code>，<code>&lt;addr&gt;~&lt;num&gt;</code>，一个<code>^</code>代表上一个节点，多个<code>^</code>代表上多个节点，<code>^&lt;num&gt;</code>表示存在多个父节点时（如使用merge指令）指定要引用哪个父节点，<code>&lt;num&gt;</code>代表父节点提交的先后；<code>~&lt;num&gt;</code>代表上<code>&lt;num&gt;</code>个节点，缺省代表一个。例如<code>HEAD^^</code>，<code>HEAD~2</code>均代表HEAD父节点的父节点</p>
+<blockquote>
+<p>小结：即<code>git checkout</code>控制HEAD指针，<code>git branch</code>控制branch指针，<code>git commit</code>创建节点并控制HEAD指向的branch指针指向新节点</p>
+</blockquote>
+<p><code>git merge &lt;branch&gt;</code> 其实就是1、新建一个节点，将当前branch指针指向的节点和<code>&lt;branch&gt;</code>所指的节点作为父节点；2、将当前branch指针指向刚刚新建的节点。 使用<code>--no-ff</code>参数（not fast forward）进行非快速向前提交，可保护main上只有关键节点的提交，例如如果merge时main所在节点到<code>&lt;branch&gt;</code>的节点没有任何分支则默认进行快速向前（fast forward）即将main移动到<code>&lt;branch&gt;</code>，而not fast forward则会新建个节点将main所在节点和<code>&lt;branch&gt;</code>所在节点作为父节点，这样可保证当main分支reset时退回main的上一节点而不是进入<code>&lt;branch&gt;</code>分支<br>
+<code>git rebase &lt;branch1&gt; &lt;branch2&gt;</code>从<code> &lt;branch2&gt;</code>（若缺省则默认HEAD位置）开始向上找父节点直到找到和<code>&lt;branch&gt;</code>的是共同父节点的节点，然后<strong>基于</strong><code>&lt;branch1&gt;</code>向下复制刚刚向上找父节点形成的改动集，然后<code> &lt;branch2&gt;</code>指向最新的末端节点。</p>
+<p><code>git reset &lt;addr&gt;</code>回撤其实就是移动指针，将当前branch指针移动到<code>&lt;addr&gt;</code>，与<code>git branch -f &lt;branch&gt; &lt;addr&gt;</code>功能，差别知识不需要指定branch指针，而是直接移动当前HEAD所指的branch指针（因此在HEAD分离，HEAD指向哈希值的情况此指令无效）<br>
+<code>git revert &lt;addr&gt;</code>复制<code>&lt;addr&gt;</code>的节点到当前branch指针所指节点的下面（这或许亦是种回撤，原因是<code>git reset &lt;addr&gt;</code>这种“改写历史”的方法对大家一起使用的远程分支是无效的，为了撤销更改并分享给别人，就需要使用 git revert<code>（此条理解可能不准确）</code></p>
+<p><code>git cherry-pick &lt;addr1&gt; &lt;addr2&gt; &lt;addr3&gt;</code>按顺序复制<code>&lt;addr&gt;</code>到当前branch指针，要牢记 cherry-pick 可以将提交树上任何地方的提交记录取过来追加到 HEAD 上（只要不是 HEAD 上游的提交就没问题）。<br>
+<code>git rebase -i &lt;branch&gt;</code>添加<code>-i</code>（<code>--interactive</code>）参数，使用交互型rebase复制移动节点，从而实现指定节点和顺序进行复制</p>
+<p><code>git tag &lt;name&gt; &lt;addr&gt;</code>给节点添加tag，在提交树中唯一识别（感觉就是给节点命名，例如把某次提交命名为Version_0.1.0代表1.0版本发布，作为里程碑的节点）<br>
+<code>git describe &lt;addr&gt;</code>它输出的结果是这样的：<br>
+<code>&lt;tag&gt;_&lt;numCommits&gt;_g&lt;hash&gt;</code><br>
+tag 表示的是离 addr 最近的标签， numCommits 是表示这个 addr 与 tag 相差有多少个提交记录， hash 表示的是你所给定的 addr 所表示的提交记录哈希值的前几位</p>
+<hr>
+<p><code>git remote add &lt;name&gt; &lt;remote&gt;</code>设置远程仓库。<br>
+在 GitHub 上创建的仓库路径为<code>git@github.com:用户名 / git-tutorial.git</code><br>
+例如<code>git remote add origin git@github.com:github-book/git-tutorial.git</code>按照上述格式执行之后，Git 会自动将<code>git@github.com:github-book/git-tutorial.git</code>设置为名称为 本地的远程仓库，名称为origin（标识符）。</p>
+<p><code>git clone</code>本地创建一个远程仓库的拷贝，同时创建对应的远程branch<code>&lt;remote name&gt;/&lt;branch name&gt;</code>，例如<code>origin/main</code>，注意使用Git 时, 你的远程仓库名默认为origin。<br>
+远程branch的特性是不会随本地提交移动，当checkout远程分支时会自动分离HEAD，远程分支只反映了远程仓库在你最后一次与它通信时（例如fetch）的状态，只有在远程仓库中相应的分支更新了以后且本地与远程通讯后才会更新。<br>
+<code>git fetch</code>完成了仅有的但是很重要的两步:</p>
+<ol>
+<li>从远程仓库下载本地仓库中缺失的提交记录</li>
+<li>更新远程分支指针(如 origin/main)</li>
+</ol>
+<p>可以将 git fetch 的理解为单纯的下载操作，并不会改变你本地仓库的状态。<code>git fetch</code>实际上将本地仓库中的远程分支更新成了远程仓库相应分支最新的状态。通常通过互联网（使用 http:// 或 git:// 协议) 与远程仓库通信<br>
+<code>git pull</code>等于fetch后再merge远程分支，添加参数<code>--rebase</code>等于fetch后再rebase远程分支<br>
+<code>git push</code>将本地改动推送到远程仓库（根据情况git可能不会给你推送），<code>git push</code>不带任何参数时的行为与 Git 的一个名为<code>push.default</code>的配置有关。它的默认值取决于正使用的 Git 的版本,在项目中进行推送之前，最好检查一下这个配置。为了 push 新变更到远程仓库，要做的其实就是包含远程仓库中最新变更。意思就是只要本地分支包含了远程分支（如 o/main）中的最新变更就可以push了<br>
+<code>git push &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>其中<code>&lt;remote&gt;</code>指定远程库，<code>&lt;source&gt;</code>指定要push本地哪个addr向上的改动集，<code>&lt;destination&gt;</code>指定push到远程库哪条分支（若缺省则为<code>&lt;source&gt;</code>跟踪的远程分支，若此分支不存在则创建）</p>
+<blockquote>
+<p><code>git fetch &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>也是类似的，只不过是相反操作<br>
+<code>git pull &lt;remote&gt; &lt;source&gt;:&lt;destination&gt;</code>也是类似的，<code>&lt;destination&gt;</code>指定HEADmerge哪条分支</p>
+</blockquote>
+<blockquote>
+<p>如果是在一个大的合作团队中工作, 很可能是main被锁定了, 需要一些Pull Request流程来合并修改。如果直接提交(commit)到本地main, 然后试图推送(push)修改, 将会收到这样类似的信息:<br>
+<code>! [远程服务器拒绝] main -&gt; main (TF402455: 不允许推送(push)这个分支; 你必须使用pull request来更新这个分支.)</code><br>
+远程服务器拒绝直接推送(push)提交到main, 因为策略配置要求 pull requests 来提交更新。按照流程，新建一个分支feature, 推送(push)这个分支并申请pull request。然后reset你的main分支和远程服务器保持一致, 否则下次pull时如果他人的提交和你的提交有冲突时就会出现问题.</p>
+</blockquote>
+<blockquote>
+<p>main 和 origin/main 的关联关系就是由分支的<strong>remote tracking</strong>属性决定的。main 被设定为跟踪 origin/main —— 这意味着为 main 分支指定了推送的目的地以及拉取后合并的目标。当克隆仓库的时候, Git 就自动把这个属性设置好了。<br>
+有两种方法设置这个属性</p>
+<ul>
+<li>方法一:<code>git checkout -b side origin/main</code><br>
+创建一个名为side的分支，它跟踪远程分支 origin/main</li>
+<li>方法二：<code>git branch -u origin/main side</code><br>
+这样side就会跟踪 origin/main 了。如果当前就在side分支上, 还可以省略side</li>
+</ul>
+</blockquote>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[文献]]></title>
+        <id>https://Tiannary.github.io/post/wen-xian/</id>
+        <link href="https://Tiannary.github.io/post/wen-xian/">
+        </link>
+        <updated>2023-05-15T12:38:24.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="为何需要阅读文献">为何需要阅读文献</h1>
+<ul>
+<li>了解课题背景知识
+<ul>
+<li>适用与对课题一无所知，亟待探索阶段</li>
+<li>阅读硕博学位论文，领域大牛文献综述</li>
+</ul>
+</li>
+<li>把握课题研究方向
+<ul>
+<li>适用对于课题已经了解，深化认知阶段</li>
+<li>阅读行业最新论文，领域大牛文献综述</li>
+</ul>
+</li>
+<li>学习课题设计思路
+<ul>
+<li>适用对于课题开始实践，设计试验阶段</li>
+<li>阅读不仅仅局限于本领域最新研究论文</li>
+</ul>
+</li>
+<li>提升逻辑写作能力
+<ul>
+<li>适用任何阶段</li>
+<li>阅读顶刊，学习为何这些文章能发顶刊</li>
+</ul>
+</li>
+</ul>
+<h1 id="文献检索">文献检索</h1>
+<p>标题 -&gt; 关键词 -&gt; 摘要 -&gt; 确定文献</p>
+<h2 id="工具">工具</h2>
+<p><strong>Stork文献鸟（Storkapp.me）</strong><br>
+通过关键词订阅最新文献发送到邮箱<br>
+<strong>Connected Papers（Connectedpapers.com）</strong><br>
+通过文献名称或者DOI，获得文献相关的论文知识图谱，跟踪文献的引用和被引用关系，快速了解领域的<strong>先前研究 Prior Works</strong>——最常被引用论文，通常是领域的开山之作，是了解领域最好的敲门砖，<strong>衍生研究 Derivative Works</strong>——领域的最新综述或者相关研究工作，是了解领域最新进展的垫脚石。</p>
+<h1 id="文献阅读">文献阅读</h1>
+<p>针对不同目标有选择性阅读文献</p>
+<h2 id="了解课题背景知识">了解课题背景知识</h2>
+<p>精读：摘要-结论-前言<br>
+略读：结果与讨论-材料与方法</p>
+<h2 id="把握课题研究方向">把握课题研究方向</h2>
+<p>精读：摘要-结论-前言<br>
+选读：结果与讨论（不足及展望）<br>
+略读：材料与方法</p>
+<h2 id="学习课题设计思路">学习课题设计思路</h2>
+<p>精读：摘要-结果与讨论-材料与方法<br>
+选读：前言（论文创新点与可行性分析）-结论</p>
+<h2 id="提升逻辑写作能力">提升逻辑写作能力</h2>
+<p>精读：摘要-前言<br>
+选读：结果与讨论（小标题及每段开头结尾）-结论<br>
+略读：材料与方法</p>
+<h1 id="笔记整理">笔记整理</h1>
+<p>核心是服务自己，学习阅读文章的重点内容及搭建文章框架，方便写作时对比讨论，引用文献</p>
+<h2 id="一种模板">一种模板</h2>
+<ol>
+<li><strong>文献信息</strong>，记录作者（一作，通讯），单位，期刊，题目，主要目的就是了解哪个课题组再进行该研究即可</li>
+<li><strong>基本框架</strong>，对研究背景，目的，结论，进行简要摘录</li>
+<li><strong>结果讨论</strong>，对文章中的关键图表，关键机理进行解释，方便后面直接了解文章的重点所在</li>
+<li><strong>文章好在哪里</strong>，强迫自己思考为什么这篇文章能发在顶刊上</li>
+<li><strong>自我想法</strong>，强迫自己总结文章值得借鉴学习的地方，使阅读成果量化，在思考中积累。例如，1个思路，这篇文章可以给自己的研究带来怎么样的思路，什么好的研究方法；2个图表，学习好的图表的形式和配色；5个句式，总结文章中好的句式，并尝试模仿且运用到写作中。</li>
+</ol>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[Zotero6实现批注检索（简易版）]]></title>
+        <id>https://Tiannary.github.io/post/zotero6-shi-xian-jian-suo-pi-zhu-jian-yi-ban/</id>
+        <link href="https://Tiannary.github.io/post/zotero6-shi-xian-jian-suo-pi-zhu-jian-yi-ban/">
+        </link>
+        <updated>2023-05-08T01:43:32.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="实现方法">实现方法</h1>
+<p>将注释添加笔记是通过模板生成的，给<code>{{comment}}</code>项添加特殊标志后，达到通过检索特殊标志实现检索批注的功能。</p>
+<h1 id="步骤">步骤</h1>
+<h2 id="修改笔记模板">修改笔记模板</h2>
+<ul>
+<li>打开编辑器<br>
+<img src="https://Tiannary.github.io/post-images/1683510403373.png" alt="" loading="lazy"></li>
+<li>检索notetemplates<br>
+<img src="https://Tiannary.github.io/post-images/1683510699356.png" alt="" loading="lazy"></li>
+<li>修改highlight项和note项的值</li>
+<li>将原本的<code>{{comment}}</code>换为<code>{{if comment}}%%{{comment}}{{endif}}</code>，其中<code>%%</code>即为我选择的特殊标志</li>
+</ul>
+<h2 id="通过注释添加条目笔记">“通过注释添加条目笔记”</h2>
+<figure data-type="image" tabindex="1"><img src="https://Tiannary.github.io/post-images/1683511047145.png" alt="" loading="lazy"></figure>
+<h2 id="检索批注">检索批注</h2>
+<p>在刚刚创建的笔记中检索自定义的特殊标志即可直接定位到自己的批注<br>
+<img src="https://Tiannary.github.io/post-images/1683511233919.png" alt="" loading="lazy"></p>
+<h1 id="结束">结束</h1>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[随笔杂记]]></title>
+        <id>https://Tiannary.github.io/post/sui-bi-za-ji/</id>
+        <link href="https://Tiannary.github.io/post/sui-bi-za-ji/">
+        </link>
+        <updated>2023-04-28T09:08:51.000Z</updated>
+        <content type="html"><![CDATA[<h1 id="脑电">脑电</h1>
+<p>本质上，EEG 反映的是数百至数千万个 平行对齐的锥体细胞突触后电位（跨越突触的电化学信号）的胞外电流总和。<br>
+脑电信号的处理不太会与大脑的具体某个解剖结构联系起来解释，最多就颞叶，枕叶啥的。如果与具体脑区结构相联系解释会比较牵强，容易受到质疑。脑电一个电极采到的信息可以说是所有脑区，共同影响的结果，不仅是纵向那一坨，还有附近的区域共同叠加出来的信号。</p>
+<h1 id="皮尔逊相关分析">皮尔逊相关分析</h1>
+<p>皮尔逊相关分析是用于评估两个连续变量之间线性相关程度的统计方法。相关系数r的取值范围在-1到1之间，其中r=1表示完全正相关，r=-1表示完全负相关，r=0表示没有线性相关关系。<br>
+计算相关系数r的公式为：</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>r</mi><mo>=</mo><mfrac><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover accent="true"><mi>x</mi><mo>ˉ</mo></mover><mo>)</mo><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover accent="true"><mi>y</mi><mo>ˉ</mo></mover><mo>)</mo></mrow><mrow><msqrt><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mo>(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mover accent="true"><mi>x</mi><mo>ˉ</mo></mover><msup><mo>)</mo><mn>2</mn></msup></mrow></msqrt><msqrt><mrow><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><mo>(</mo><msub><mi>y</mi><mi>i</mi></msub><mo>−</mo><mover accent="true"><mi>y</mi><mo>ˉ</mo></mover><msup><mo>)</mo><mn>2</mn></msup></mrow></msqrt></mrow></mfrac></mrow><annotation encoding="application/x-tex">r = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2} \sqrt{\sum_{i=1}^{n}(y_i - \bar{y})^2}}
+</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:2.624002em;vertical-align:-1.13em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.494002em;"><span style="top:-2.1727090000000002em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.937291em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathdefault">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">x</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.22222em;">ˉ</span></span></span></span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.740108em;"><span style="top:-2.9890000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span><span style="top:-2.897291em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg width='400em' height='1.28em' viewBox='0 0 400000 1296' preserveAspectRatio='xMinYMin slice'><path d='M263,681c0.7,0,18,39.7,52,119c34,79.3,68.167,
+158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120c340,-704.7,510.7,-1060.3,512,-1067
+c4.7,-7.3,11,-11,19,-11H40000v40H1012.3s-271.3,567,-271.3,567c-38.7,80.7,-84,
+175,-136,283c-52,108,-89.167,185.3,-111.5,232c-22.3,46.7,-33.8,70.3,-34.5,71
+c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1s-109,-253,-109,-253c-72.7,-168,-109.3,
+-252,-110,-252c-10.7,8,-22,16.7,-34,26c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26
+s76,-59,76,-59s76,-60,76,-60z M1001 80H40000v40H1012z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.302709em;"><span></span></span></span></span></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.937291em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.19444em;">ˉ</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.19444em;"><span></span></span></span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.740108em;"><span style="top:-2.9890000000000003em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span></span></span><span style="top:-2.897291em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg width='400em' height='1.28em' viewBox='0 0 400000 1296' preserveAspectRatio='xMinYMin slice'><path d='M263,681c0.7,0,18,39.7,52,119c34,79.3,68.167,
+158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120c340,-704.7,510.7,-1060.3,512,-1067
+c4.7,-7.3,11,-11,19,-11H40000v40H1012.3s-271.3,567,-271.3,567c-38.7,80.7,-84,
+175,-136,283c-52,108,-89.167,185.3,-111.5,232c-22.3,46.7,-33.8,70.3,-34.5,71
+c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1s-109,-253,-109,-253c-72.7,-168,-109.3,
+-252,-110,-252c-10.7,8,-22,16.7,-34,26c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26
+s76,-59,76,-59s76,-60,76,-60z M1001 80H40000v40H1012z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.302709em;"><span></span></span></span></span></span></span></span><span style="top:-3.23em;"><span class="pstrut" style="height:3em;"></span><span class="frac-line" style="border-bottom-width:0.04em;"></span></span><span style="top:-3.6897100000000003em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mop"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.804292em;"><span style="top:-2.40029em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">i</span><span class="mrel mtight">=</span><span class="mord mtight">1</span></span></span></span><span style="top:-3.2029em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.29971000000000003em;"><span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span class="mord mathdefault">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">x</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.22222em;">ˉ</span></span></span></span></span></span><span class="mclose">)</span><span class="mopen">(</span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.19444em;">ˉ</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.19444em;"><span></span></span></span></span></span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:1.13em;"><span></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></p>
+<p>其中，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>x</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">x_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.58056em;vertical-align:-0.15em;"></span><span class="mord"><span class="mord mathdefault">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>和<span class="katex"><span class="katex-mathml"><math><semantics><mrow><msub><mi>y</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">y_i</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:-0.03588em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span></span></span></span>是样本中第i个数据点的值，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover accent="true"><mi>x</mi><mo>ˉ</mo></mover></mrow><annotation encoding="application/x-tex">\bar{x}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.56778em;vertical-align:0em;"></span><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault">x</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.22222em;">ˉ</span></span></span></span></span></span></span></span></span>和<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mover accent="true"><mi>y</mi><mo>ˉ</mo></mover></mrow><annotation encoding="application/x-tex">\bar{y}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.7622199999999999em;vertical-align:-0.19444em;"></span><span class="mord accent"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.56778em;"><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.03588em;">y</span></span></span><span style="top:-3em;"><span class="pstrut" style="height:3em;"></span><span class="accent-body" style="left:-0.19444em;">ˉ</span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.19444em;"><span></span></span></span></span></span></span></span></span>分别是<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault">x</span></span></span></span>和<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span></span></span></span>的样本均值，<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>n</mi></mrow><annotation encoding="application/x-tex">n</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault">n</span></span></span></span>是样本大小。<br>
+该公式计算的是<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>x</mi></mrow><annotation encoding="application/x-tex">x</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.43056em;vertical-align:0em;"></span><span class="mord mathdefault">x</span></span></span></span>和<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi>y</mi></mrow><annotation encoding="application/x-tex">y</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.625em;vertical-align:-0.19444em;"></span><span class="mord mathdefault" style="margin-right:0.03588em;">y</span></span></span></span>的协方差除以它们各自的标准差之积，从而反映它们之间的线性相关程度。当相关系数r越接近1或-1时，表示两个变量之间的线性关系越强；当r越接近0时，表示两个变量之间的线性关系越弱或者没有线性关系。</p>
+<h1 id="回归模型">回归模型</h1>
+<p>建立回归模型的主要目的是预测一个或多个自变量和因变量之间的关系。回归分析可以帮助研究人员了解自变量和因变量之间的关系、预测因变量的值，并进行因变量的控制和预测。<br>
+回归模型的应用非常广泛，例如：<br>
+<strong>预测</strong>：可以使用回归模型来预测某个因变量的值，例如房价预测、股票价格预测等。<br>
+<strong>诊断</strong>：可以使用回归模型来确定一些因素与某种疾病之间的相关性，例如研究吸烟和肺癌之间的关系。<br>
+<strong>控制</strong>：可以使用回归模型来控制其他变量对因变量的影响，例如研究在不同的学习环境下，学生的成绩受哪些因素影响。<br>
+<strong>优化</strong>：可以使用回归模型来优化因变量，例如研究一些变量如何影响生产率，从而找到最佳的生产方案。<br>
+总之，回归模型是一种非常有用的工具，可以帮助研究人员更好地了解和预测自变量和因变量之间的关系。</p>
+<h1 id="l1-l2范数">L1、L2范数</h1>
+<p>L1范数和L2范数是机器学习中常用的正则化方法。<br>
+L1范数指的是向量中每个元素的绝对值之和，即 <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>x</mi><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mn>1</mn><mo>=</mo><mo>∑</mo><msup><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msup><mi mathvariant="normal">∣</mi><msub><mi>x</mi><mi>i</mi></msub><mi mathvariant="normal">∣</mi></mrow><annotation encoding="application/x-tex">||x||1=\sum{i=1}^n|x_i|</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord">∣</span><span class="mord">∣</span><span class="mord">1</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.00001em;vertical-align:-0.25001em;"></span><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord">1</span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.713812em;"><span style="top:-3.11242em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span></span></span></span><span class="mord">∣</span><span class="mord"><span class="mord mathdefault">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.31166399999999994em;"><span style="top:-2.5500000000000003em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.15em;"><span></span></span></span></span></span></span><span class="mord">∣</span></span></span></span>。<br>
+L2范数指的是向量中每个元素的平方和再开方，即 <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>x</mi><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mn>2</mn><mo>=</mo><msqrt><mrow><mo>∑</mo><msup><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></msup><msubsup><mi>x</mi><mi>i</mi><mn>2</mn></msubsup></mrow></msqrt></mrow><annotation encoding="application/x-tex">||x||2 = \sqrt{\sum{i=1}^n x_i^2}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord">∣</span><span class="mord">∣</span><span class="mord">2</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.24em;vertical-align:-0.2954779999999999em;"></span><span class="mord sqrt"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.9445220000000001em;"><span class="svg-align" style="top:-3.2em;"><span class="pstrut" style="height:3.2em;"></span><span class="mord" style="padding-left:1em;"><span class="mop op-symbol small-op" style="position:relative;top:-0.0000050000000000050004em;">∑</span><span class="mspace" style="margin-right:0.16666666666666666em;"></span><span class="mord"><span class="mord"><span class="mord mathdefault">i</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mord">1</span></span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.713812em;"><span style="top:-3.11242em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">n</span></span></span></span></span></span></span></span><span class="mord"><span class="mord mathdefault">x</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:0.7959080000000001em;"><span style="top:-2.4231360000000004em;margin-left:0em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">i</span></span></span><span style="top:-3.0448000000000004em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.27686399999999994em;"><span></span></span></span></span></span></span></span></span><span style="top:-2.904522em;"><span class="pstrut" style="height:3.2em;"></span><span class="hide-tail" style="min-width:1.02em;height:1.28em;"><svg width='400em' height='1.28em' viewBox='0 0 400000 1296' preserveAspectRatio='xMinYMin slice'><path d='M263,681c0.7,0,18,39.7,52,119c34,79.3,68.167,
+158.7,102.5,238c34.3,79.3,51.8,119.3,52.5,120c340,-704.7,510.7,-1060.3,512,-1067
+c4.7,-7.3,11,-11,19,-11H40000v40H1012.3s-271.3,567,-271.3,567c-38.7,80.7,-84,
+175,-136,283c-52,108,-89.167,185.3,-111.5,232c-22.3,46.7,-33.8,70.3,-34.5,71
+c-4.7,4.7,-12.3,7,-23,7s-12,-1,-12,-1s-109,-253,-109,-253c-72.7,-168,-109.3,
+-252,-110,-252c-10.7,8,-22,16.7,-34,26c-22,17.3,-33.3,26,-34,26s-26,-26,-26,-26
+s76,-59,76,-59s76,-60,76,-60z M1001 80H40000v40H1012z'/></svg></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.2954779999999999em;"><span></span></span></span></span></span></span></span></span>。<br>
+在机器学习中，L1范数和L2范数经常用于正则化，即加入正则项来限制模型的复杂度，从而避免过拟合。L1范数正则化通常会使得一些系数变为0，因此常被用于特征选择。L2范数正则化则可以避免系数过大，使得模型更加稳定。<br>
+在优化问题中，L1范数和L2范数也常被用于损失函数的惩罚项，以控制优化的解的稀疏性或平滑性。</p>
+<p>User<br>
+还有其他范数吗<br>
+ChatGPT<br>
+除了L1范数和L2范数，还有一些其他的范数，例如：<br>
+L0范数：表示向量中非零元素的个数。<br>
+Lp范数：表示向量中各元素的p次方和的p次方根，即<span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>x</mi><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>p</mi><mo>=</mo><mo>(</mo><mi mathvariant="normal">∣</mi><mi>x</mi><mn>1</mn><msup><mi mathvariant="normal">∣</mi><mi>p</mi></msup><mo>+</mo><mi mathvariant="normal">∣</mi><mi>x</mi><mn>2</mn><msup><mi mathvariant="normal">∣</mi><mi>p</mi></msup><mo>+</mo><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mi mathvariant="normal">.</mi><mo>+</mo><mi mathvariant="normal">∣</mi><mi>x</mi><mi>n</mi><msup><mi mathvariant="normal">∣</mi><mi>p</mi></msup><msup><mo>)</mo><mo>(</mo></msup><mn>1</mn><mi mathvariant="normal">/</mi><mi>p</mi><mo>)</mo></mrow><annotation encoding="application/x-tex">||x||p = (|x1|^p + |x2|^p + ... + |xn|^p)^(1/p)</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault">p</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mopen">(</span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord">1</span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.664392em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">p</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord">2</span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.664392em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">p</span></span></span></span></span></span></span></span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:0.66666em;vertical-align:-0.08333em;"></span><span class="mord">.</span><span class="mord">.</span><span class="mord">.</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right:0.2222222222222222em;"></span></span><span class="base"><span class="strut" style="height:1.138em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord mathdefault">x</span><span class="mord mathdefault">n</span><span class="mord"><span class="mord">∣</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.664392em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathdefault mtight">p</span></span></span></span></span></span></span></span><span class="mclose"><span class="mclose">)</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8879999999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mopen mtight">(</span></span></span></span></span></span></span></span><span class="mord">1</span><span class="mord">/</span><span class="mord mathdefault">p</span><span class="mclose">)</span></span></span></span>，其中p是一个正实数。当p等于2时即为L2范数，即为平常熟知的欧拉距离。<br>
+Frobenius范数：对于一个矩阵A，其Frobenius范数定义为 <span class="katex"><span class="katex-mathml"><math><semantics><mrow><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>A</mi><mi mathvariant="normal">∣</mi><mi mathvariant="normal">∣</mi><mi>F</mi><mo>=</mo><mi>s</mi><mi>q</mi><mi>r</mi><mi>t</mi><mo>(</mo><mi>s</mi><mi>u</mi><mi>m</mi><mo>(</mo><mi>A</mi><mo>[</mo><mi>i</mi><mo>]</mo><mo>[</mo><mi>j</mi><msup><mo>]</mo><mn>2</mn></msup><mo>)</mo><mo>)</mo></mrow><annotation encoding="application/x-tex">||A||F = sqrt(sum(A[i][j]^2))</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:1em;vertical-align:-0.25em;"></span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault">A</span><span class="mord">∣</span><span class="mord">∣</span><span class="mord mathdefault" style="margin-right:0.13889em;">F</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right:0.2777777777777778em;"></span></span><span class="base"><span class="strut" style="height:1.064108em;vertical-align:-0.25em;"></span><span class="mord mathdefault">s</span><span class="mord mathdefault" style="margin-right:0.03588em;">q</span><span class="mord mathdefault" style="margin-right:0.02778em;">r</span><span class="mord mathdefault">t</span><span class="mopen">(</span><span class="mord mathdefault">s</span><span class="mord mathdefault">u</span><span class="mord mathdefault">m</span><span class="mopen">(</span><span class="mord mathdefault">A</span><span class="mopen">[</span><span class="mord mathdefault">i</span><span class="mclose">]</span><span class="mopen">[</span><span class="mord mathdefault" style="margin-right:0.05724em;">j</span><span class="mclose"><span class="mclose">]</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height:0.8141079999999999em;"><span style="top:-3.063em;margin-right:0.05em;"><span class="pstrut" style="height:2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">2</span></span></span></span></span></span></span></span><span class="mclose">)</span><span class="mclose">)</span></span></span></span>，即A中所有元素的平方和的平方根。<br>
+这些范数在不同的场景下有不同的应用，例如L0范数可以用于稀疏学习，Lp范数可以在模型中调整正则化项的强度，Frobenius范数可以用于衡量矩阵的大小。</p>
+<p>User<br>
+如何选择合适的范数<br>
+ChatGPT<br>
+选择合适的范数通常要根据具体问题和应用场景来确定。<br>
+L1范数和L2范数是最常用的两种范数，L1范数常用于Lasso回归和特征选择，L2范数常用于Ridge回归和最小二乘法。此外，还有一些其他的范数，例如Lp范数、无穷范数、核范数等，这些范数在不同的场景下也有各自的应用。<br>
+选择合适的范数应该考虑问题的性质和数据的分布情况，以及模型的表现和稳定性等因素。在实际应用中，通常需要进行交叉验证等实验来评估模型的性能，进而确定最适合的范数。</p>
+<h1 id="基于时间序列的脑电分析方法">基于时间序列的脑电分析方法</h1>
+<p>常见的时域分析方法有周期幅度法、 Fujimori 法以及自回归模型（Autoregressive model, AR model）。其中周期幅度法主 要衡量半波宽度、积分幅度以及半波曲线长度等指标；Fujimori 法根据检测出的 EEG 周期将信号划分到不同的频段，然后用统计柱状图分析不同频段下波的数目 和幅度从而实现对脑电不同节律的识别；自回归（Autoregressive, AR ）模型被 广泛地应用于诸如波形预测、频谱估计以及系统辨识等脑电分析中，其模型系数 刻画了单个时间序列固有的演变过程，因而在模式识别中常被当作特征使用。<br>
+频域分析方法侧重刻画 EEG 的功率谱分布模式。通常可以 通过参数方法或者非参数方法将时域的 EEG 信号转化为频域中的功率谱分布。 非参数方法不需要时间序列分布的先验信息，可以直接通过观测数据对信号的功 率谱密度进行估计而不需要建立额外的概率分布模型。常见的非参数估计方法主 要有周期图法、加窗周期图法、平均周期图法、welch 法以及相关图法等。<br>
+参数估计方法需要通过观测值估计出模型参数从而捕捉随机 信号的频谱特性。相比于非参数模型，参数估计方法在估计模型系数时并不需要 大量数据，因而在实际应用中更受青睐。在脑电的功率谱估计中，参数估计方法 主要有三类，分别是自回归模型（Autoregressive model, AR model）、移动平均模型 (Moving average, MA) 以及自回归移动平均模型（Autoregressive moving average, ARMA）。在这三类方法中，AR 模型在当前的脑电分析中应用得最为广泛。<br>
+除了上述提到的时域和频域分析方法，提取最大方差信息的主成分分析 （Principle component analysis, PCA）、提取最大能量比差异的共空间模式分析 （Common spatial pattern, CSP）、提取信号独立成分的独立成分分析（Independent component analysis，ICA）以及提取反馈负波特征的 xDAWN 算法[28]等基于现代信 号分析的方法也已经被广泛地应用于 EEG 的相关分析中。</p>
+<h1 id="基于网络结构的脑电分析方法">基于网络结构的脑电分析方法</h1>
+<p>在 认知神经科学领域，有向脑网络分析因为能够捕捉到信息的传播模式已经被广泛 应用于神经机制和临床分析研究。随着网络研究方法的不断革新，诸如动态因果 模 型（ Dynamic causal modeling, DCM）、结构方程模型（S tructural equation modeling, SEM）以及格兰杰因果分析（Granger causality analysis, GCA）等有向网络估计方法已经越来越多地得到神经科学领域相关研究人员的关注和使用。其中，GCA 在 众多时域网络构建方法中使用得最为广泛。<br>
+为了研究大脑信息加工在频域的因果网络模式，研究人员相继发展了 DTF 以 及偏有向相干（Partial directed coherence, PDC）等频域因果网络分析方法。在近几年，PDC 已经被广泛应用于神经影像数据的频域网络分析中。<br>
+虽然，GCA 以及 PDC 等因果网络分析方法在 EEG 相关研究中得到了广泛应 用，但是这些方法只能在信号满足平稳性的条件下才可能估计出可靠的网络连接 模式。在近几年的报道中，基于非平稳信号处理的因果网络分析方法逐渐成为研 究热点。在这方面，Milde 等人提出了一种估计高维时变自回归模型系数的方法用 以分析仿真数据以及高维多试次光诱发电位之间的相互影响。Leistritz 等人系统 性地检验了卡尔曼滤波方法对时变自回归（Time-varying autoregressive, T VA R ）模 型系数估计的可靠性。Omidvarnia 等人通过正交化因果多元自回归模型系数， 改进了时变广义偏有向相干方法（Time-varying generalized partial directed coherence, TV-gPDC）。</p>
+<h1 id="脑电的特征识别方法">脑电的特征识别方法</h1>
+<p>通过上述提及的两类分析方法，研究人员往往能够从 EEG 信号中提取出一系 列的特征。这些特征很难直观反映样本的类别信息，因此需要进一步借助特征识 别技术学习出对应的分类器，从而实现对 EEG 样本的分类识别。迄今为止，脑电研究中已经涌现出了一大批特征识别方法，这些方法主要有以下三种划分方式：<br>
+继承—区分：继承型分类器在基于特征给样本分类时会计算样本属于特定类 别的似然概率值并选择最大的一个作为分类依据；区分型分类器在给样本分类时 会按照某种特定的区分规则，直接对特征向量进行区分。<br>
+静态—动态：静态分类器在基于特征给样本分类时不考虑时间信息，适合于 EEG 的离线分析；动态分类器则在基于特征给样本分类时，能够捕获特征的动态 变化因而在在线分析中有着更广泛的应用。<br>
+平稳—非平稳性：平稳分类器在基于特征给样本分类时，必须满足样本的平 稳性，即训练集中的微小变化不会明显影响他们的协方差估计；相反，非平稳分 类器则在基于特征给样本分类时放宽了这一条件。<br>
+在诸多特征识别的方法中，线性判别分析（Linear discriminant analysis, LDA）、 局部保留映射（Local preserving projection, LPP）以及谱回归分析（Spectral regression analysis, SR）等基于图嵌入分析的特征识别方法在近年来受到了一定关注。</p>
+<h1 id="脑电逆问题">脑电逆问题</h1>
+<p>User<br>
+那近几年的呢<br>
+ChatGPT<br>
+近年来，脑电逆问题方面的研究一直在不断发展，很多学者和研究团队都做出了一些重要的贡献。以下是一些近年来在脑电逆问题方面做出杰出贡献的研究者：<br>
+Laurent Cohen，法国巴黎综合理工大学的教授，他的研究重点在于基于先验知识的正则化方法和高维数据分析。<br>
+Yonghong Chen，美国华盛顿大学的教授，他的研究重点在于基于稳健统计学的脑电源定位和时空脑网络分析。<br>
+Robert Oostenveld，荷兰代尔夫特理工大学的教授，他是开源软件FieldTrip的创始人之一，他的研究重点在于脑电源空间解析度的提高和脑电源定位的准确性改善。<br>
+Sylvain Baillet，加拿大蒙特利尔神经科学研究所的研究员，他是开源软件Brainstorm的创始人之一，他的研究重点在于高精度脑电源定位和时空脑网络分析。<br>
+Mingzhou Ding，美国佛罗里达大学的教授，他的研究重点在于时空脑网络分析和脑动力学建模。<br>
+以上只是一小部分做出杰出贡献的研究者，脑电逆问题方面的研究还有很多其他的优秀学者和团队。</p>
+<p>User<br>
+继续<br>
+ChatGPT<br>
+近年来，随着神经科学技术的发展和研究的深入，脑电逆问题的研究也取得了许多进展。以下是一些近年来的相关研究：<br>
+Cichy et al.（2019）提出了一种新的脑电逆问题解决方案，该方案基于深度神经网络，并且可以使用少量的被试数据来进行个体化的脑电源定位。<br>
+Grouiller et al.（2019）使用多模态脑成像技术来研究癫痫患者的脑电逆问题。他们开发了一种新的方法，结合了脑磁图和脑电图数据，从而提高了定位准确性和可靠性。<br>
+Van Mierlo et al.（2020）提出了一种基于稳态视觉诱发电位的脑电逆问题解决方案。他们使用一种新的算法，称为Beamform-Space-Time-Frequency-ICA（BSTF-ICA），来定位脑电源，并在探究视觉信息处理方面取得了良好的效果。<br>
+Zhou et al.（2021）研究了使用深度学习来解决脑电逆问题的可能性，并开发了一种新的深度学习模型，称为DenseUNet。他们的研究表明，DenseUNet在定位脑电源方面具有较高的准确性和鲁棒性。<br>
+这些研究都为脑电逆问题的解决提供了新的思路和方法，并且在提高定位准确性和可靠性方面取得了一定的成果。</p>
+<h1 id="分析">分析</h1>
+<p>在认知神经科学领域，多个脑区之间的相互影响模式以及这些模式随时间的 变化一直是重要且被反复提及的问题。为了解决这个问题，相关领域的学者在早 期提出了一系列刻画信号间相互关系的方法，例如基于相干分析，部分相干分析的网络分析方法以及这些方法在时变分析中的拓展。然而基于相干函数的网络分析方法并不具备方向性，即它们无法提供信息流的方向。为了克服这一缺陷，学者们继而提出了基于多元线性自回归分析的方法以量化频域中的因果关系。</p>
+<h1 id="机器学习名词概念">机器学习名词概念</h1>
+<p>监督学习、无监督学习和强化学习是机器学习领域中的三个主要分支，它们都是基于数据的学习方法，但在学习过程中所使用的数据和方法略有不同。</p>
+<p>监督学习是一种有监督的学习方法，其目标是通过已经标注好的数据集来训练模型，使其能够准确地预测未知数据的标签或值。在监督学习中，数据集通常包括输入数据和相应的标签或输出。训练过程中，模型根据输入数据与对应标签之间的关系来调整自身参数，以最小化预测结果与真实标签之间的误差。监督学习的一些常见应用包括图像分类、语音识别和自然语言处理等。</p>
+<p>无监督学习是一种没有标注的数据的学习方法，其目标是从数据中发现有意义的结构或模式。在无监督学习中，数据集不包含任何标签或输出，模型需要自行发现数据中的规律和潜在结构。常见的无监督学习方法包括聚类、降维、关联规则挖掘等。无监督学习的应用包括异常检测、数据可视化、推荐系统等。</p>
+<p>强化学习是一种基于智能体与环境交互的学习方法，其目标是通过智能体与环境的交互，使其能够学习如何在不同状态下采取行动以获得最大的奖励。在强化学习中，智能体通过试错来不断调整策略，从而使其在未来的状态中能够获得更多的奖励。强化学习的应用包括游戏、机器人控制、自动驾驶等。</p>
+<p>这三种学习方法之间的关系可以理解为它们在处理数据时的不同方式。监督学习需要标注好的数据集，可以认为是从有标注的数据中学习；无监督学习不需要标注的数据，可以认为是从无标注的数据中学习；强化学习则不是从数据中学习，而是从与环境的交互中学习。此外，它们之间还有很多交叉和相互影响的地方，例如无监督学习可以用于监督学习中的特征提取，强化学习可以与无监督学习相结合用于探索状态空间。</p>
+<p>除了监督学习、无监督学习和强化学习，机器学习还涉及到以下一些概念：</p>
+<p>半监督学习（Semi-supervised Learning）：介于监督学习和无监督学习之间的一种学习方式，既利用有标签数据进行监督学习，又利用无标签数据进行无监督学习。</p>
+<p>迁移学习（Transfer Learning）：指在一个任务上学习到的知识和经验能够被应用于另一个相关任务上的机器学习方法。</p>
+<p>增强学习（Reinforcement Learning）：是一种强调智能体（agent）与环境交互的机器学习方法，智能体通过与环境的交互来学习如何在某个环境下做出最优的决策。</p>
+<p>深度学习（Deep Learning）：是一种基于人工神经网络（Artificial Neural Network）的机器学习方法，能够通过多层非线性变换来学习数据的特征表示。</p>
+<p>集成学习（Ensemble Learning）：是一种将多个机器学习模型集成起来进行预测的方法，常用的方法包括投票法、平均法、Bagging、Boosting等。</p>
+<p>核方法（Kernel Methods）：是一类基于核函数的机器学习方法，通过将数据映射到高维空间来实现非线性分类。</p>
+<p>数据降维（Dimensionality Reduction）：是指将高维数据映射到低维空间的一类技术，常用的方法包括主成分分析（PCA）、独立成分分析（ICA）、t-SNE等。</p>
+<p>贝叶斯方法（Bayesian Methods）：是一类基于贝叶斯定理的机器学习方法，常用的方法包括朴素贝叶斯、贝叶斯网络、马尔可夫链蒙特卡罗（MCMC）等。</p>
+<p>特征工程（Feature Engineering）：指在机器学习模型训练之前，对原始数据进行预处理和特征选择的过程，目的是提取有用的特征，降低冗余信息，提高模型训练的效率和准确性。</p>
+<p>模型选择（Model Selection）：指在机器学习任务中，选择最适合数据集的模型的过程。常用的方法包括交叉验证、网格搜索等。</p>
+<p>模型评估（Model Evaluation）：指对训练好的模型进行测试和评估的过程。通常使用准确率、召回率、精度、F1值等指标来评估模型的性能。</p>
+<p>过拟合（Overfitting）：指模型在训练集上表现良好，但在测试集或新数据上表现不佳的现象。过拟合通常是由于模型过于复杂或训练数据不足导致的。</p>
+<p>欠拟合（Underfitting）：指模型在训练集和测试集上表现均不佳的现象。欠拟合通常是由于模型过于简单或训练数据过少导致的。</p>
+<p>超参数（Hyperparameters）：指在机器学习模型中需要手动设置的参数，例如学习率、正则化系数等。超参数的选择通常需要通过试验和调整来确定最优值。</p>
+<p>损失函数（Loss Function）：指机器学习模型用来衡量预测值与真实值之间差异的函数。常见的损失函数包括平均绝对误差（MAE）、均方误差（MSE）、交叉熵（Cross-Entropy）等。</p>
+<p>梯度下降（Gradient Descent）：指一种优化算法，用于最小化损失函数。梯度下降的基本思想是通过计算损失函数对每个参数的导数，从而更新模型参数，使得损失函数不断减小。</p>
+<h1 id="数值优化">数值优化</h1>
+<p>拟牛顿法BFGS是什么<br>
+ChatGPT<br>
+拟牛顿法是一种用于无约束优化问题的数值优化算法。BFGS是拟牛顿法中的一种，全称为“Broyden-Fletcher-Goldfarb-Shanno”。它使用拟牛顿方程来近似牛顿方程，从而避免了计算高阶导数所需的计算量，是求解大规模优化问题的常用方法之一。BFGS算法的优点是收敛速度较快，且通常具有较好的全局收敛性能。在许多数值优化问题中，BFGS算法已经被证明是一种非常有效的算法。<br>
+User<br>
+什么是数值优化<br>
+ChatGPT<br>
+数值优化（Numerical optimization）是一种利用数学算法和计算机计算来寻求最优解或最小化（最大化）目标函数的方法。它的应用非常广泛，包括经济、金融、物理、工程等领域。通常情况下，优化问题可以表述为：在满足一定的约束条件下，寻求使得某个目标函数最优（最大或最小）的变量值。在数值优化中，我们通过使用各种算法，以迭代的方式不断寻找更好的解。最终我们可以得到一个局部最优解或全局最优解，取决于问题的性质和算法的选择。<br>
+User<br>
+相当于数值优化是在寻找数值解而不是解析解吗<br>
+ChatGPT<br>
+是的，数值优化通常用于寻找数值解，而不是解析解。在许多实际问题中，很难获得解析解或者解析解的计算复杂度很高，这时候数值优化方法就显得尤为重要。数值优化方法通过数值计算寻找目标函数的极值或最小值，可以用于解决很多实际问题，例如优化控制、模型拟合、机器学习等领域。</p>
+<h1 id="事件相关电位">事件相关电位</h1>
+<p>EEG 信号进行叠加产生的事件相关电位（Event related potential, ERP）常被作为研究心理认知因素的重要工具。P1、P3、伴随性负波（Contingent negative variation, CNV）、失匹配负波（Mismach negativity, MMN）和 N400 等，对应不同的心理认知过程。P1 成分常出现在视觉刺激后 60-90 毫秒间，其最高峰位于两侧枕叶区域，它与空间注意的方向有关，同时受到个体觉醒水平的影响。P3 成分的最大波幅常在顶叶出现，通 过 Oddball 实验范式研究发现，靶刺激对应的 P3 幅值大于标准刺激的幅值，表明 P3 波幅与被试投入的心理资源量为正相关关系。CNV 是在实验中预备信号和命令信号间产生的 EEG 负性偏转成分，它是个体在完成同一种任务时由期待、意动、觉醒和注意等多种心理因素综合组成的一种加重的心理负荷。MMN 是靶刺激产生的 ERP 减去标准刺激产生的 ERP 得到的差异波，常在 100-250 毫秒出现的负波，研究发现它是非随意注意开启的现象。N400 是研究大脑语言加工的一种成分，句子符合正常的语法和语境不会诱发 N400，当句子中有单词出现明显歧义时，在 这个歧义词后 400 毫秒出现的负波成分。这些 ERP 成分可以有效地捕捉相关认知过程，有助于客观地对心理学认知功能进行测量和研究。</p>
+<h1 id="脑网络分析的连接">脑网络分析的连接</h1>
+<p>1.4.1 功能连接 功能连接是指不同神经集群活动的时间相关。对于功能连接的分析方法，我 们主要从线性连接、非线性耦合技术和基于信息的技术三个方面来阐述。<br>
+1.4.1.1 线性连接 采用电极间脑电信号间的互相关来测量大脑连接始于 1960 年<br>
+，高的相关性 表示相关脑区之间对应很强的功能连接。相关性平方数（ Magnitude squared coherence, MSC）或者相干（Coherence, COH）可以用来测量频域上的线性连接<br>
+。 COH 分析方法可以用来测量不同频带上信号的空间相关性。COH 对于能量改变和 相位改变之间的关系是很敏感的，即如果一个信号的能量和相位中的一个发生改 变，相干值都会受到影响；如果整个时间段上两个信号的原有关系没有改变，那 么相干值也会保持不变。同时，相关性能在一段或几段的信号中被计算，对相位 和极性都很敏感，但与振幅无关。所以，能量在相干性上的影响可以忽略，且结果类似于相关。<br>
+1.4.1.2 非线性耦合技术 非线性耦合技术是在明确而且严格的假设条件下提供补充信息，它并不优于线 性方法。基于确定性混沌的非线性耦合技术用来测量动态 EEG 信号目前得到了很 好的发展。非线性耦合技术基于的理论是很多重要的神经进程都存在非线性特 征。于 1980 年，同步的概念就被引入用于测量神经连接，它是基于混沌振子的交 互影响。同步可以被认为是震荡对象之间的节律调整，因为震荡对象间存在着 微弱作用。在神经科学领域，同步主要是通过相位同步和广义同步来表现。当被 试加工认知任务的时候，相位同步常见为 Gamma 频段内大规模震荡，即在短时间 内进入精确的相位锁定。同时，相位同步常被作为病理的研究机制，如癫痫的发 病机制。在相位同步方法中，相位锁时值（Phase locking value, PLV）能够提供不 同脑区相位同步的统计测量值。<br>
+1.4.1.3 基于信息的技术 基于信息的技术在两个时间序列上对线性和非线性的统计依赖关系很敏感。 其中最具代表性的方法为交互信息，即通过测量其它信号来获得一个信号的大量 信息来测量两个信号间的相互依赖关系。此方法已被用来诊断多种疾病，如精神分裂症。另一个基于信息的方法用来评估两个时间序列的独立性，是基于两个 序列间相互作为另一个功能的可预测度，如，最小描述长度指标 （Minimum description length, MDL），已有研究证实这种基于信息的技术能够很好地挖掘存在 于时间序列间的非线性复杂关系。<br>
+1.4.2 有效连接 有效连接是一个神经系统对其它神经系统直接或者间接的影响，通常描述为脑 区之间的动态定向信息交互。我们可以从采集到的信号中直接对有效连接进行估 计，或基于模型来确定因果连接。本节我们主要介绍有效连接的两种重要方法： 基于模型和基于数据驱动的有效连接技术。<br>
+1.4.2.1 基于模型 基于神经生理学和合理推论可以建立模型来反映大脑区域间的相互影响。作为 独立源混合信号的神经生理数据在特定阶段的时间空间的相关已被广泛研究。 Friston 等人的研究中基于神经集群模型提出了相应的动态因果模型（Dynami causality model, DCM）。 DCM 的基本原理是根据已知信息，对可能的连接进行多 种假设，然后利用贝叶斯来对假设连接进行筛选，最后保留在假设连接中最优的 模型。DCM 已在 fMRI 和 EEG 的因果研究中获得了成功的应用，但此方法也存 在问题，它要求网络节点不能太多，否则假设连接过于复杂，该算法则不能有效 地求解。<br>
+1.4.2.2 基于数据驱动 相比基于模型的技术，基于数据驱动的技术不需要假定特殊的模型或空间和时 间关系的先验知识。其中格兰杰因果（Granger causality, GC）是典型的数据驱动有 效连接技术。GC 假设用两者过去的信息去预测结果比单独用一种过去的信息预测 更有效，那么第二个信号就能作为第一个信号的因。于 1982 年，Geweke 将其 运用到了频域，GC 是时间上的逼近。随着 GC 方法的发展，它产生了从二元到多 元的概念。通过 GC 方法发展而来的定向传递函数（Directed transfer function, DTF） 和部分定向相干技术（Partial directed coherence, PDC）被应用到双变量的情况中。 同时，在最近的研究中，基于这些方法，研究者发展出了动态的网络分析方法， 如，自适应定向传递函数（Adaptive directed transfer function，ADTF）和时变多元 变量分析技术等，能够捕捉到瞬态的网络信息，在认知研究中具有潜在的应用价值。</p>
+]]></content>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[第一次测试]]></title>
+        <id>https://Tiannary.github.io/post/di-yi-ci-ce-shi/</id>
+        <link href="https://Tiannary.github.io/post/di-yi-ci-ce-shi/">
+        </link>
+        <updated>2023-04-26T12:16:31.000Z</updated>
+        <content type="html"><![CDATA[<figure data-type="image" tabindex="1"><img src="https://Tiannary.github.io/post-images/1682587569069.gif" alt="wahaha" loading="lazy"></figure>
+<h1 id="一级标题">一级标题</h1>
+<p>久违的写博客😋😦<br>
+<strong>Gridea</strong>确实挺好用</p>
+<h2 id="二级标题">二级标题</h2>
+<p><code>import my.py</code><br>
+代码块</p>
+<pre><code class="language-cpp">int main()
+{
+    int a, b;
+    return 0;
+}
+</code></pre>
+<hr>
+<blockquote>
+<p>This is an index.</p>
+</blockquote>
+<h3 id="三级标题">三级标题</h3>
+<p><em>Katex</em>测试</p>
+<p class='katex-block'><span class="katex-display"><span class="katex"><span class="katex-mathml"><math><semantics><mrow><mo fence="true">{</mo><mtable><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>α</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>β</mi></mstyle></mtd></mtr><mtr><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>θ</mi></mstyle></mtd><mtd><mstyle scriptlevel="0" displaystyle="false"><mi>γ</mi></mstyle></mtd></mtr></mtable><mo fence="true">}</mo></mrow><annotation encoding="application/x-tex">\begin{Bmatrix}
+\alpha &amp; \beta \\
+\theta &amp; \gamma
+\end{Bmatrix}</annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:2.40003em;vertical-align:-0.95003em;"></span><span class="minner"><span class="mopen delimcenter" style="top:0em;"><span class="delimsizing size3">{</span></span><span class="mord"><span class="mtable"><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.0037em;">α</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.02778em;">θ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span><span class="arraycolsep" style="width:0.5em;"></span><span class="arraycolsep" style="width:0.5em;"></span><span class="col-align-c"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height:1.45em;"><span style="top:-3.61em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.05278em;">β</span></span></span><span style="top:-2.4099999999999997em;"><span class="pstrut" style="height:3em;"></span><span class="mord"><span class="mord mathdefault" style="margin-right:0.05556em;">γ</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height:0.9500000000000004em;"><span></span></span></span></span></span></span></span><span class="mclose delimcenter" style="top:0em;"><span class="delimsizing size3">}</span></span></span></span></span></span></span></p>
+<table>
+<thead>
+<tr>
+<th style="text-align:center">column1</th>
+<th style="text-align:right">column2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:center">1</td>
+<td style="text-align:right">2</td>
+</tr>
+<tr>
+<td style="text-align:center">3</td>
+<td style="text-align:right">4</td>
+</tr>
+</tbody>
+</table>
+<h4 id="四级标签">四级标签</h4>
+<p>段落测试<br>
+这是一行字。<br>
+这是第二行字。<br>
+这是第三行字</p>
+]]></content>
+    </entry>
+</feed>
